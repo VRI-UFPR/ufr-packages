@@ -61,10 +61,10 @@ int main() {
     printf("Press keys (Press 'q' to quit)...\n");
 
     // Inicializa a comunicação com o roomba
-    link_t cmdvel = ufr_publisher("@new mqtt @host 177.153.62.174 @topic /pioneer/cmd_vel");
+    link_t cmdvel = ufr_publisher("@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/cmd_vel");
 
     // Loop principal
-    while (1) {
+    while ( ufr_loop() ) {
         // Poll for 100ms. Returns > 0 if a key was pressed.
         int ret = poll(&pfd, 1, 100);
 
@@ -77,16 +77,16 @@ int main() {
 
                 // Caso apertado w, s, a, d, altera a velocidade do roomba 
                 if ( c == 'w' ) {
-                    ufr_put(&cmdvel, "%f %f\n", 0.1, 0.0);
+                    ufr_put(&cmdvel, "%f %f\n", 1.0, 0.0);
 
                 } else if ( c == 's' ) {
-                    ufr_put(&cmdvel, "%f %f\n", -0.1, 0.0);
+                    ufr_put(&cmdvel, "%f %f\n", -1.0, 0.0);
 
                 } else if ( c == 'a' ) {
-                    ufr_put(&cmdvel, "%f %f\n", 0.0, 1.0);
+                    ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
 
                 } else if ( c == 'd' ) {
-                    ufr_put(&cmdvel, "%f %f\n", 0.0, 1.0);
+                    ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
 
                 // Caso apertado espaço, pára o roomba
                 } else if ( c == ' ' ) {

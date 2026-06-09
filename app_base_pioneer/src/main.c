@@ -45,64 +45,61 @@
 // ============================================================================
 
 int main(int argc, char *argv[]) {
-    link_t timer = ufr_subscriber("@new posix:timer @time 200ms @debug 0");
-
+    link_t timer = ufr_subscriber("@new timer @time 200ms");
     link_t vel_cmd = ufr_subscriber(ROBOT_TOPIC_CMD_VEL);
-    link_t vel_cmd2 = ufr_subscriber("@new mqtt @coder msgpack @host 10.0.0.4 @topic /cmd_vel @debug 0");
-
     link_t odom = ufr_publisher(ROBOT_TOPIC_ODOM);
-    link_t odom2 = ufr_publisher("@new mqtt @coder msgpack @debug 0 @host 10.0.0.4 @topic /odom");
 
-    pioneer_connect("/dev/pioneer", 0);
+    pioneer_connect("/dev/ttyUSB0", 0);
     pioneer_disable_sonars();
-    // pioneer_enable_motors();
+    // -- pioneer_enable_motors();
 
     // Main loop
-    // signal (SIGINT, my_handler);
-    int count = 0;
-    float vel, rotvel, pos_th;
-    int pos_x, pos_y;
+    int count = 0;   
+    int16_t i16_vel = 0;
+    int16_t i16_rotvel = 0;
+    float vel=0, rotvel=0;
     while( ufr_loop_ok() ) {
 
-        if ( ufr_recv_async(&vel_cmd) == UFR_OK ) {
-            ufr_get(&vel_cmd, "ff", &vel, &rotvel);
+        if ( ufr_recv_async(&vel_cmd) ) {
+            ufr_get(&vel_cmd, "%f %f", &vel, &rotvel);
+            i16_vel = (int16_t) (vel * 100.0);
+            i16_rotvel = (int16_t) rotvel;
+            printf("%f %f\n", vel, rotvel);
 
-            int16_t i16_vel = (int16_t) (vel * 100.0);
-            int16_t i16_rotvel = (int16_t) rotvel;
+            if ( i16_vel > 150 ) {
+                i16_vel = 150;
+            } else if ( i16_vel < -150 ) {
+                i16_vel = -150;
+            }
+
+            if ( i16_rotvel > 10 ) {
+                i16_rotvel = 10;
+            } else if ( i16_rotvel < -10 ) {
+                i16_rotvel = -10;
+            }
+
             pioneer_vel( i16_vel );
             pioneer_rotvel( i16_rotvel );
-            printf("[LOG]: %d %d\n", i16_vel, i16_rotvel);
-            count = 0;
-        }
-
-        if ( ufr_recv_async(&vel_cmd2) == UFR_OK ) {
-            ufr_get(&vel_cmd2, "ff", &vel, &rotvel);
-
-            int16_t i16_vel = (int16_t) (vel * 100.0);
-            int16_t i16_rotvel = (int16_t) rotvel;
-            pioneer_vel( i16_vel );
-            pioneer_rotvel( i16_rotvel );
-            printf("[LOG]: %d %d\n", i16_vel, i16_rotvel);
+	        printf("[LOG]: %d %d\n", i16_vel, i16_rotvel);
             count = 0;
         }
 
         if ( ufr_recv_async(&timer) == UFR_OK ) {
             if ( count >= 3 ) {
-                // vel = 0;
-                // rotvel = 0;
-                pioneer_vel(vel);
-                pioneer_rotvel(rotvel);
+                pioneer_vel(i16_vel);
+                pioneer_rotvel(i16_rotvel);
+                printf("[LOG]: %d %d\n", i16_vel, i16_rotvel);
                 count = 0;
-                // printf("[LOG]: Timeout\n");
+                printf("[LOG]: Timeout\n");
             }
             count += 1;
         }
 
         // publishes the odometry
+        int pos_x, pos_y;
+        float pos_th;
         pioneer_read(&pos_x, &pos_y, &pos_th);
-        // printf("%d %d %f %f %f\n", pos_x, pos_y, pos_th, vel, rotvel);
-        ufr_put(&odom, "iifff\n", pos_x, pos_y, pos_th*M_PI/180.0, vel, rotvel);
-        ufr_put(&odom2, "iifff\n", pos_x, pos_y, pos_th*M_PI/180.0, vel, rotvel);
+        ufr_put(&odom, "%d %d %f %f %f\n", pos_x, pos_y, pos_th*M_PI/180.0, vel, rotvel);
 
         // wait 50ms
         usleep(50000);
