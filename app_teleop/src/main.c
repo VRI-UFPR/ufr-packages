@@ -86,7 +86,7 @@ int main() {
                     ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
 
                 } else if ( c == 'd' ) {
-                    ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
+                    ufr_put(&cmdvel, "%f %f\n", 0.0, -10.0);
 
                 // Caso apertado espaço, pára o roomba
                 } else if ( c == ' ' ) {

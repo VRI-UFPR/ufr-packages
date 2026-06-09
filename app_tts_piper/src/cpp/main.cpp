@@ -1,3 +1,6 @@
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
@@ -27,6 +30,8 @@
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
+
+#define ROBOT_TOPIC_TTS "@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/tts"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -227,57 +232,59 @@ int main(int argc, char *argv[]) {
     spdlog::info("Output directory: {}", runConfig.outputPath.value().string());
   }
 
-  link_t topic = ufr_subscriber("@new mqtt @coder msgpack @host 127.0.0.1 @topic tts");
+  link_t topic = ufr_subscriber(ROBOT_TOPIC_TTS);
+
+  ma_result ma_result;
+  ma_engine ma_engine;
+  ma_result = ma_engine_init(NULL, &ma_engine);
+  if (ma_result != MA_SUCCESS) {
+      std::cerr << "Failed to initialize audio engine." << std::endl;
+      return -1;
+  }
 
 
   string line;
   piper::SynthesisResult result;
   while ( ufr_loop_ok() ) {
     char buffer[1024];
-    ufr_get(&topic, "^s", buffer);
+    ufr_get(&topic, "> %s", buffer);
+    // printf("[LOG]: %s\n", buffer);
     line = buffer;
 
     auto outputType = runConfig.outputType;
     auto speakerId = voice.synthesisConfig.speakerId;
     std::optional<filesystem::path> maybeOutputPath = runConfig.outputPath;
 
-    if (runConfig.jsonInput) {
-      // Each line is a JSON object
-      json lineRoot = json::parse(line);
+    printf("gerando\n");
+    ofstream audioFile("saida.wav", ios::binary);
+    piper::textToWavFile(piperConfig, voice, line, audioFile, result);
 
-      // Text is required
-      line = lineRoot["text"].get<std::string>();
 
-      if (lineRoot.contains("output_file")) {
-        // Override output WAV file path
-        outputType = OUTPUT_FILE;
-        maybeOutputPath =
-            filesystem::path(lineRoot["output_file"].get<std::string>());
-      }
-
-      if (lineRoot.contains("speaker_id")) {
-        // Override speaker id
-        voice.synthesisConfig.speakerId =
-            lineRoot["speaker_id"].get<piper::SpeakerId>();
-      } else if (lineRoot.contains("speaker")) {
-        // Resolve to id using speaker id map
-        auto speakerName = lineRoot["speaker"].get<std::string>();
-        if ((voice.modelConfig.speakerIdMap) &&
-            (voice.modelConfig.speakerIdMap->count(speakerName) > 0)) {
-          voice.synthesisConfig.speakerId =
-              (*voice.modelConfig.speakerIdMap)[speakerName];
-        } else {
-          spdlog::warn("No speaker named: {}", speakerName);
-        }
-      }
+    printf("tocando\n");
+    ma_result = ma_engine_play_sound(&ma_engine, "saida.wav", NULL);
+    if (ma_result != MA_SUCCESS) {
+        std::cerr << "Failed to play sound file. Ensure the file exists." << std::endl;
+        ma_engine_uninit(&ma_engine);
+        break;
     }
 
-    // Timestamp is used for path to output WAV file
-    const auto now = chrono::system_clock::now();
-    const auto timestamp =
-        chrono::duration_cast<chrono::nanoseconds>(now.time_since_epoch())
-            .count();
+    // 3. Keep the program alive while the sound plays
+    // Loop check to see if the engine is still processing active sounds
+    /*while (ma_engine_get_channels(&ma_engine) > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }*/
+    printf("fim\n");
 
+
+
+
+
+
+
+
+
+    // piper::textToWavFile(piperConfig, voice, line, cout, result);
+/*
     if (outputType == OUTPUT_DIRECTORY) {
       // Generate path using timestamp
       stringstream outputName;
@@ -365,7 +372,7 @@ int main(int argc, char *argv[]) {
                  result.audioSeconds);
 
     // Restore config (--json-input)
-    voice.synthesisConfig.speakerId = speakerId;
+    voice.synthesisConfig.speakerId = speakerId;*/
 
   } // for each line
 
