@@ -30,6 +30,10 @@
 
 struct termios orig_termios;
 
+#ifndef ROBOT_TOPIC_CMD_VEL
+#define ROBOT_TOPIC_CMD_VEL "@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/cmd_vel"
+#endif
+
 // ============================================================================
 //  Funções
 // ============================================================================
@@ -61,7 +65,7 @@ int main() {
     printf("Press keys (Press 'q' to quit)...\n");
 
     // Inicializa a comunicação com o roomba
-    link_t cmdvel = ufr_publisher("@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/cmd_vel");
+    link_t cmdvel = ufr_publisher(ROBOT_TOPIC_CMD_VEL);
 
     // Loop principal
     while ( ufr_loop() ) {
@@ -86,7 +90,7 @@ int main() {
                     ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
 
                 } else if ( c == 'd' ) {
-                    ufr_put(&cmdvel, "%f %f\n", 0.0, 10.0);
+                    ufr_put(&cmdvel, "%f %f\n", 0.0, -10.0);
 
                 // Caso apertado espaço, pára o roomba
                 } else if ( c == ' ' ) {
