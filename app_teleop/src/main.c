@@ -31,7 +31,8 @@
 struct termios orig_termios;
 
 #ifndef ROBOT_TOPIC_CMD_VEL
-#define ROBOT_TOPIC_CMD_VEL "@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/cmd_vel"
+// #define ROBOT_TOPIC_CMD_VEL "@new mqtt @coder msgpack @host 177.153.62.174 @topic /pioneer/cmd_vel"
+#define ROBOT_TOPIC_CMD_VEL "@new webots  @topic cmd_vel"
 #endif
 
 // ============================================================================
