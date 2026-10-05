@@ -54,8 +54,8 @@ int main() {
     std::vector<uint8_t> buffer;
 
     // Open the link
-    link_t video = ufr_publisher(ROBOT_TOPIC_CAMERA_RGB);
-    ufr_exit_if_error(&video);
+    link_t* video = ufr_publisher(ROBOT_TOPIC_CAMERA_RGB);
+    ufr_exit_if_error(video);
 
     // Initialize the camera
     cv::VideoCapture cap(0);
@@ -67,20 +67,22 @@ int main() {
         cap.read(frame);
 
         // Decrease the FPS
-        if ( count < 6 ) {
-            count += 1;
-            continue;
-        }
-        count = 0;
+        if ( count > 15 ) {
+            // Zera o contador
+            count = 0;
 
-        // Send the frame
-        imencode(".jpg", frame, buffer);
-        ufr_put_file(&video, "image/jpeg", (const char*) &buffer[0], buffer.size());
-        ufr_send(&video);
+            // Send the frame
+            imencode(".jpg", frame, buffer);
+            ufr_put_file(video, "image/jpeg", (const char*) &buffer[0], buffer.size());
+            ufr_send(video);
+        } else {
+            count += 1;
+        }
+        
     }
 
     // fim
-    ufr_close(&video);
+    ufr_close(video);
     return 0;
 }
 
